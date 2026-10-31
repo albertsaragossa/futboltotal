@@ -55,43 +55,75 @@ h2{font-size:1rem;color:var(--gold);text-transform:uppercase;letter-spacing:2px;
 
 <script src="data.js"></script>
 <script>
-const $=s=>document.querySelector(s);
+const $=s=>document.querySelector(s),enc=encodeURIComponent;
 const CATS={players:"🧑 Jugadors",coaches:"🧢 Entrenadors",stadiums:"🏟️ Estadis"};
 const sel={lg:"es",cat:"players",np:1};
 const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const j=u=>fetch(u).then(r=>{if(!r.ok)throw 0;return r.json()});
 function chips(el,items,key){
   el.innerHTML="";
   items.forEach(([v,l])=>{const b=document.createElement("button");b.className="chip"+(sel[key]==v?" on":"");b.textContent=l;
     b.onclick=()=>{sel[key]=v;chips(el,items,key)};el.append(b)});
 }
-chips($("#lg"),[...Object.entries(DATA.leagues),["all","Altres (totes les lligues)"]],"lg");
+chips($("#lg"),[...LEAGUES.map(l=>[l.id,l.name]),["all","Altres (totes les lligues)"]],"lg");
 chips($("#cat"),Object.entries(CATS),"cat");
 chips($("#np"),[1,2,3,4,5].map(n=>[n,n+(n==1?" jugador":" jugadors")]),"np");
 
-let S;
-$("#start").onclick=()=>{
-  const pool=DATA[sel.cat].filter(x=>sel.lg=="all"||x.l==sel.lg);
-  const teams=sel.lg=="all"?Object.values(DATA.teams).flat():DATA.teams[sel.lg];
-  if(!pool.length){alert("Encara no hi ha dades per a aquesta combinació. Afegeix-les a data.js");return}
-  S={pool,teams,deck:[],scores:Array(+sel.np).fill(0),turn:0,locked:false};
-  $("#menu").style.display="none";$("#game").style.display="grid";next();
-};
-const cache={};
-async function photo(it){
-  if(it.img)return {url:it.img};
-  const k=it.w||it.n;if(k in cache)return cache[k];
-  const j=u=>fetch(u).then(r=>r.json());
+// ---- Dades de Wikidata ----
+const LC={};
+async function qid(L){
+  if(L.q)return L.q;
+  const r=await j(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${enc(L.s)}&language=en&type=item&limit=1&format=json&origin=*`);
+  return L.q=r.search[0].id;
+}
+const sp=async s=>(await j("https://query.wikidata.org/sparql?format=json&query="+enc(s))).results.bindings;
+const lab=(v,n)=>`?${v} rdfs:label ?${n}. FILTER(lang(?${n})="en")`;
+function load(L){
+  return LC[L.id]||(LC[L.id]=(async()=>{
+    const q=await qid(L),T=`?t wdt:P118 wd:${q}.`;
+    const [pl,co,st]=await Promise.all([
+      sp(`SELECT ?n ?tn ?img WHERE{${T} ?p p:P54 ?s. ?s ps:P54 ?t. FILTER NOT EXISTS{?s pq:P582 ?e} ?p wdt:P18 ?img; wdt:P569 ?b. FILTER(YEAR(?b)>=1986) FILTER NOT EXISTS{?p wdt:P570 ?d} ${lab("p","n")} ${lab("t","tn")}} LIMIT 4000`),
+      sp(`SELECT ?n ?tn ?img WHERE{${T} ?t p:P286 ?s. ?s ps:P286 ?p. FILTER NOT EXISTS{?s pq:P582 ?e} ?p wdt:P18 ?img. ${lab("p","n")} ${lab("t","tn")}} LIMIT 500`),
+      sp(`SELECT ?n ?tn ?img WHERE{${T} ?t wdt:P115 ?p. ?p wdt:P18 ?img. ${lab("p","n")} ${lab("t","tn")}} LIMIT 500`)
+    ]);
+    const conv=r=>{const seen=new Set();return r.map(b=>({n:b.n.value,t:b.tn.value,img:b.img.value})).filter(x=>!seen.has(x.n)&&seen.add(x.n))};
+    const d={players:conv(pl),coaches:conv(co),stadiums:conv(st)};
+    d.teams=[...new Set(d.players.map(x=>x.t))];
+    if(d.teams.length<5)d.teams=[...new Set([...d.teams,...d.coaches.map(x=>x.t),...d.stadiums.map(x=>x.t)])];
+    return d;
+  })().catch(e=>{delete LC[L.id];throw e}));
+}
+
+// ---- Fotos (Commons, llicència lliure) ----
+const CC={};
+const imgUrl=u=>u.replace(/^http:/,"https:")+(u.includes("?")?"":"?width=600");
+async function credit(u){
+  const f=decodeURIComponent(u.split("/Special:FilePath/")[1]||"").split("?")[0];
+  if(!f)return"";
+  if(f in CC)return CC[f];
   try{
-    const r=await j(`https://en.wikipedia.org/w/api.php?action=query&redirects=1&titles=${encodeURIComponent(k)}&prop=pageimages&piprop=thumbnail|name&pithumbsize=700&format=json&origin=*`);
-    const p=Object.values(r.query.pages)[0];
-    if(!p.thumbnail)return cache[k]={};
-    // només Commons (llicència lliure); si l'arxiu no hi és, no es fa servir
-    const m=await j(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent("File:"+p.pageimage)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`);
+    const m=await j(`https://commons.wikimedia.org/w/api.php?action=query&titles=${enc("File:"+f)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`);
     const e=Object.values(m.query.pages)[0].imageinfo[0].extmetadata;
     const a=(e.Artist&&e.Artist.value||"").replace(/<[^>]+>/g,"").trim();
-    return cache[k]={url:p.thumbnail.source,credit:"Foto: "+(a||"autor desconegut")+" · "+(e.LicenseShortName?e.LicenseShortName.value:"")+" · Wikimedia Commons"};
-  }catch(x){return cache[k]={}}
+    return CC[f]="Foto: "+(a||"autor desconegut")+" · "+(e.LicenseShortName?e.LicenseShortName.value:"")+" · Wikimedia Commons";
+  }catch(x){return CC[f]=""}
 }
+
+// ---- Joc ----
+let S;
+$("#start").onclick=async()=>{
+  const b=$("#start");b.disabled=true;b.textContent="Carregant dades de Wikidata…";
+  try{
+    const ls=sel.lg=="all"?LEAGUES:[LEAGUES.find(l=>l.id==sel.lg)];
+    const rs=(await Promise.allSettled(ls.map(load))).filter(r=>r.status=="fulfilled").map(r=>r.value);
+    if(!rs.length)throw 0;
+    const pool=rs.flatMap(d=>d[sel.cat]),teams=[...new Set(rs.flatMap(d=>d.teams))];
+    if(!pool.length||teams.length<5){alert("No he trobat prou dades d'aquesta combinació a Wikidata. Prova una altra lliga o modalitat.");return}
+    S={pool,teams,deck:[],scores:Array(+sel.np).fill(0),turn:0,locked:false};
+    $("#menu").style.display="none";$("#game").style.display="grid";next();
+  }catch(e){alert("No s'han pogut carregar les dades (Wikidata no respon o no hi ha connexió). Torna-ho a provar.")}
+  finally{b.disabled=false;b.textContent="Comença!"}
+};
 function silhouette(){return '<svg viewBox="0 0 100 130"><circle cx="50" cy="42" r="20" fill="#fff8"/><path d="M12 130c0-30 17-48 38-48s38 18 38 48z" fill="#fff8"/></svg>'}
 function bar(){
   $("#bar").innerHTML=S.scores.map((s,i)=>`<div class="pl${i==S.turn?" cur":""}">${S.scores.length>1?"Jugador "+(i+1):"Punts"}: ${s}</div>`).join("");
@@ -99,9 +131,11 @@ function bar(){
 function next(){
   if(!S.deck.length)S.deck=shuffle(S.pool);
   const it=S.cur=S.deck.pop();S.locked=false;
-  const tag=sel.cat=="players"?(it.pos||"JUGADOR"):sel.cat=="coaches"?"ENTRENADOR":"ESTADI";
+  const tag=sel.cat=="players"?"JUGADOR":sel.cat=="coaches"?"ENTRENADOR":"ESTADI";
   $("#pic").innerHTML=`<span class="tag">${tag}</span>`+silhouette();$("#credit").textContent="";
-  photo(it).then(p=>{if(S.cur!==it||!p.url)return;const im=new Image();im.alt="";im.onload=()=>{if(S.cur!==it)return;$("#pic").innerHTML=`<span class="tag">${tag}</span>`;$("#pic").append(im);$("#credit").textContent=p.credit||""};im.src=p.url});
+  const im=new Image();im.alt="";
+  im.onload=()=>{if(S.cur!==it)return;$("#pic").innerHTML=`<span class="tag">${tag}</span>`;$("#pic").append(im);credit(it.img).then(c=>{if(S.cur===it)$("#credit").textContent=c})};
+  im.src=imgUrl(it.img);
   $("#q").textContent=S.scores.length>1?`Torn del jugador ${S.turn+1} — de quin equip és?`:"De quin equip és?";
   const opts=shuffle([it.t,...shuffle(S.teams.filter(t=>t!=it.t)).slice(0,4)]);
   $("#opts").innerHTML="";

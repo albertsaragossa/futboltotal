@@ -1,40 +1,21 @@
-// DADES DEL JOC — edita aquest fitxer per afegir jugadors, entrenadors i estadis.
-// La foto es busca sola a Wikipedia/Wikimedia Commons a partir del nom (n). Només s'usen imatges amb llicència lliure.
-// Opcional: w = títol exacte de la pàgina de Wikipedia si el nom és ambigu (ex. w: "Vinícius Júnior"); img = foto pròpia (ex. "img/foto.jpg").
-// IMPORTANT: revisa equips i plantilles de la temporada actual (aquests són exemples).
-const DATA = {
-  leagues: {
-    es: "LaLiga", en: "Premier League", it: "Serie A", de: "Bundesliga", fr: "Ligue 1"
-  },
-  teams: {
-    es: ["Real Madrid","FC Barcelona","Atlético de Madrid","Athletic Club","Real Sociedad","Villarreal","Real Betis","Sevilla","Valencia","Girona","Celta de Vigo","Osasuna","Getafe","Rayo Vallecano","Mallorca","Espanyol","Alavés","Elche","Levante","Real Oviedo"],
-    en: ["Arsenal","Aston Villa","Bournemouth","Brentford","Brighton","Chelsea","Crystal Palace","Everton","Fulham","Leeds United","Liverpool","Manchester City","Manchester United","Newcastle","Nottingham Forest","Sunderland","Tottenham","West Ham","Wolverhampton","Burnley"],
-    it: ["Inter","AC Milan","Juventus","Napoli","Roma","Lazio","Atalanta","Fiorentina","Bologna","Torino","Genoa","Udinese","Cagliari","Lecce","Parma","Como","Verona","Sassuolo","Cremonese","Pisa"],
-    de: ["Bayern Munic","Borussia Dortmund","Bayer Leverkusen","RB Leipzig","Eintracht Frankfurt","VfB Stuttgart","Wolfsburg","Borussia M'gladbach","Friburg","Werder Bremen","Hoffenheim","Mainz 05","Augsburg","Union Berlin","Heidenheim","St. Pauli","Colònia","Hamburg"],
-    fr: ["Paris Saint-Germain","Olympique de Marsella","Olympique de Lió","Mònaco","Lille","Niça","Rennes","Lens","Estrasburg","Nantes","Tolosa","Reims","Montpeller","Brest","Le Havre","Angers","Auxerre","Lorient"]
-  },
-  // l = codi de lliga, t = equip (ha de coincidir amb la llista d'equips), n = nom (només per tu, mai es mostra), pos = posició
-  players: [
-    { n: "Lamine Yamal", t: "FC Barcelona", l: "es", pos: "DAVANTER" },
-    { n: "Vinícius Jr.", t: "Real Madrid", l: "es", pos: "DAVANTER" },
-    { n: "Erling Haaland", t: "Manchester City", l: "en", pos: "DAVANTER" },
-    { n: "Mohamed Salah", t: "Liverpool", l: "en", pos: "DAVANTER" },
-    { n: "Lautaro Martínez", t: "Inter", l: "it", pos: "DAVANTER" },
-    { n: "Harry Kane", t: "Bayern Munic", l: "de", pos: "DAVANTER" },
-    { n: "Ousmane Dembélé", t: "Paris Saint-Germain", l: "fr", pos: "DAVANTER" }
-  ],
-  coaches: [
-    { n: "Hansi Flick", t: "FC Barcelona", l: "es" },
-    { n: "Arne Slot", t: "Liverpool", l: "en" },
-    { n: "Vincent Kompany", t: "Bayern Munic", l: "de" },
-    { n: "Luis Enrique", t: "Paris Saint-Germain", l: "fr" }
-  ],
-  stadiums: [
-    { n: "Camp Nou", t: "FC Barcelona", l: "es" },
-    { n: "Santiago Bernabéu", t: "Real Madrid", l: "es" },
-    { n: "Anfield", t: "Liverpool", l: "en" },
-    { n: "San Siro", t: "Inter", l: "it" },
-    { n: "Allianz Arena", t: "Bayern Munic", l: "de" },
-    { n: "Parc des Princes", t: "Paris Saint-Germain", l: "fr" }
-  ]
-};
+// LLIGUES DEL JOC. Jugadors, entrenadors, estadis i fotos es carreguen sols de Wikidata / Wikimedia Commons.
+// Per afegir una lliga: una línia nova amb  id (únic), name (el que es mostra)  i
+//   q: "Q…" (identificador de la lliga a Wikidata, el més fiable)  O  s: "nom a la Viquipèdia en anglès" (el joc el busca).
+const LEAGUES = [
+  { id: "es", name: "LaLiga",               q: "Q324867" },
+  { id: "en", name: "Premier League",       q: "Q9448" },
+  { id: "it", name: "Serie A",              q: "Q15804" },
+  { id: "de", name: "Bundesliga",           q: "Q82595" },
+  { id: "fr", name: "Ligue 1",              q: "Q13394" },
+  { id: "nl", name: "Eredivisie",           s: "Eredivisie" },
+  { id: "pt", name: "Primeira Liga",        s: "Primeira Liga" },
+  { id: "be", name: "Pro League (Bèlgica)", s: "Belgian Pro League" },
+  { id: "tr", name: "Süper Lig",            s: "Süper Lig" },
+  { id: "sc", name: "Scottish Premiership", s: "Scottish Premiership" },
+  { id: "br", name: "Brasileirão",          s: "Campeonato Brasileiro Série A" },
+  { id: "ar", name: "Liga Argentina",       s: "Argentine Primera División" },
+  { id: "us", name: "MLS",                  s: "Major League Soccer" },
+  { id: "mx", name: "Liga MX",              s: "Liga MX" },
+  { id: "sa", name: "Saudi Pro League",     s: "Saudi Pro League" },
+  { id: "jp", name: "J1 League",            s: "J1 League" }
+];
