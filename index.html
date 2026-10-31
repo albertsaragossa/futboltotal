@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Endevina l'equip · Cromos</title>
+<style>
+:root{--bg:#0b1d3a;--gold:#f5c542;--red:#d62839;--blue:#1d4ed8;--ink:#10223f}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:system-ui,Segoe UI,sans-serif;background:radial-gradient(circle at 50% 0,#17346b,var(--bg));color:#fff}
+h1{font-size:2rem;margin:0 0 .5rem;text-align:center;letter-spacing:1px}
+.wrap{max-width:760px;margin:0 auto;padding:1.5rem}
+h2{font-size:1rem;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin:1.4rem 0 .5rem}
+.row{display:flex;flex-wrap:wrap;gap:.6rem}
+.chip{padding:.7rem 1.1rem;border-radius:999px;border:2px solid #fff3;background:#ffffff12;color:#fff;font-size:1rem;cursor:pointer}
+.chip.on{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.go{margin-top:1.8rem;width:100%;padding:1rem;font-size:1.2rem;font-weight:800;border:0;border-radius:12px;background:var(--red);color:#fff;cursor:pointer}
+#game{display:none;height:100vh;grid-template-rows:auto 1fr;grid-template-columns:1fr 1fr}
+#bar{grid-column:1/3;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;padding:.6rem;background:#0006}
+.pl{padding:.3rem .8rem;border-radius:8px;background:#ffffff18;font-size:.95rem}
+.pl.cur{background:var(--gold);color:var(--ink);font-weight:800}
+.left,.right{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:1rem;gap:.7rem;min-height:0}
+.card{height:min(100%,520px);aspect-ratio:3/4;max-width:100%;border-radius:14px;padding:12px;background:linear-gradient(135deg,#fff,#e9e9e9);box-shadow:0 10px 30px #0008;display:flex;flex-direction:column;transform:rotate(-1.5deg)}
+.pic{flex:1;min-height:0;border-radius:8px;border:3px solid var(--ink);background:linear-gradient(160deg,#2b6cff,#12b886 55%,#f5c542);position:relative;overflow:hidden}
+.pic img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.pic svg{width:100%;height:100%}
+.tag{position:absolute;top:8px;left:8px;background:var(--red);color:#fff;font-weight:800;font-size:.7rem;padding:3px 8px;border-radius:4px;letter-spacing:1px}
+.name{margin-top:8px;background:linear-gradient(90deg,var(--red),var(--blue));color:#fff;text-align:center;font-weight:900;letter-spacing:6px;padding:.5rem;border-radius:6px;font-size:1.1rem;transform:skew(-6deg)}
+.opt{width:min(100%,420px);padding:1rem;font-size:1.1rem;border-radius:12px;border:2px solid #fff4;background:#ffffff14;color:#fff;cursor:pointer}
+.opt:hover:not(:disabled){background:#ffffff30}
+.opt.ok{background:#16a34a;border-color:#16a34a}
+.opt.ko{background:#dc2626;border-color:#dc2626}
+#credit{font-size:.7rem;opacity:.6;text-align:center;max-width:90%}
+#q{color:var(--gold);font-weight:700;text-align:center}
+#end{display:none;text-align:center;padding:3rem 1rem}
+@media(max-width:700px){#game{grid-template-columns:1fr;grid-template-rows:auto 1fr 1fr;height:100vh}#bar{grid-column:1}.left,.right{padding:.4rem}.opt{padding:.6rem;font-size:1rem}}
+</style>
+</head>
+<body>
+<div class="wrap" id="menu">
+  <h1>⚽ Endevina l'equip</h1>
+  <h2>1. Lliga</h2><div class="row" id="lg"></div>
+  <h2>2. Modalitat</h2><div class="row" id="cat"></div>
+  <h2>3. Jugadors</h2><div class="row" id="np"></div>
+  <button class="go" id="start">Comença!</button>
+</div>
+
+<div id="game">
+  <div id="bar"></div>
+  <div class="left"><div class="card"><div class="pic" id="pic"></div><div class="name" id="nm">? ? ?</div></div><div id="credit"></div></div>
+  <div class="right"><div id="q"></div><div id="opts" style="display:contents"></div></div>
+</div>
+
+<div id="end"><h1 id="win"></h1><div id="fin"></div><button class="go" style="max-width:320px" onclick="location.reload()">Tornar a jugar</button></div>
+
+<script src="data.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const CATS={players:"🧑 Jugadors",coaches:"🧢 Entrenadors",stadiums:"🏟️ Estadis"};
+const sel={lg:"es",cat:"players",np:1};
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function chips(el,items,key){
+  el.innerHTML="";
+  items.forEach(([v,l])=>{const b=document.createElement("button");b.className="chip"+(sel[key]==v?" on":"");b.textContent=l;
+    b.onclick=()=>{sel[key]=v;chips(el,items,key)};el.append(b)});
+}
+chips($("#lg"),[...Object.entries(DATA.leagues),["all","Altres (totes les lligues)"]],"lg");
+chips($("#cat"),Object.entries(CATS),"cat");
+chips($("#np"),[1,2,3,4,5].map(n=>[n,n+(n==1?" jugador":" jugadors")]),"np");
+
+let S;
+$("#start").onclick=()=>{
+  const pool=DATA[sel.cat].filter(x=>sel.lg=="all"||x.l==sel.lg);
+  const teams=sel.lg=="all"?Object.values(DATA.teams).flat():DATA.teams[sel.lg];
+  if(!pool.length){alert("Encara no hi ha dades per a aquesta combinació. Afegeix-les a data.js");return}
+  S={pool,teams,deck:[],scores:Array(+sel.np).fill(0),turn:0,locked:false};
+  $("#menu").style.display="none";$("#game").style.display="grid";next();
+};
+const cache={};
+async function photo(it){
+  if(it.img)return {url:it.img};
+  const k=it.w||it.n;if(k in cache)return cache[k];
+  const j=u=>fetch(u).then(r=>r.json());
+  try{
+    const r=await j(`https://en.wikipedia.org/w/api.php?action=query&redirects=1&titles=${encodeURIComponent(k)}&prop=pageimages&piprop=thumbnail|name&pithumbsize=700&format=json&origin=*`);
+    const p=Object.values(r.query.pages)[0];
+    if(!p.thumbnail)return cache[k]={};
+    // només Commons (llicència lliure); si l'arxiu no hi és, no es fa servir
+    const m=await j(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent("File:"+p.pageimage)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`);
+    const e=Object.values(m.query.pages)[0].imageinfo[0].extmetadata;
+    const a=(e.Artist&&e.Artist.value||"").replace(/<[^>]+>/g,"").trim();
+    return cache[k]={url:p.thumbnail.source,credit:"Foto: "+(a||"autor desconegut")+" · "+(e.LicenseShortName?e.LicenseShortName.value:"")+" · Wikimedia Commons"};
+  }catch(x){return cache[k]={}}
+}
+function silhouette(){return '<svg viewBox="0 0 100 130"><circle cx="50" cy="42" r="20" fill="#fff8"/><path d="M12 130c0-30 17-48 38-48s38 18 38 48z" fill="#fff8"/></svg>'}
+function bar(){
+  $("#bar").innerHTML=S.scores.map((s,i)=>`<div class="pl${i==S.turn?" cur":""}">${S.scores.length>1?"Jugador "+(i+1):"Punts"}: ${s}</div>`).join("");
+}
+function next(){
+  if(!S.deck.length)S.deck=shuffle(S.pool);
+  const it=S.cur=S.deck.pop();S.locked=false;
+  const tag=sel.cat=="players"?(it.pos||"JUGADOR"):sel.cat=="coaches"?"ENTRENADOR":"ESTADI";
+  $("#pic").innerHTML=`<span class="tag">${tag}</span>`+silhouette();$("#credit").textContent="";
+  photo(it).then(p=>{if(S.cur!==it||!p.url)return;const im=new Image();im.alt="";im.onload=()=>{if(S.cur!==it)return;$("#pic").innerHTML=`<span class="tag">${tag}</span>`;$("#pic").append(im);$("#credit").textContent=p.credit||""};im.src=p.url});
+  $("#q").textContent=S.scores.length>1?`Torn del jugador ${S.turn+1} — de quin equip és?`:"De quin equip és?";
+  const opts=shuffle([it.t,...shuffle(S.teams.filter(t=>t!=it.t)).slice(0,4)]);
+  $("#opts").innerHTML="";
+  opts.forEach(t=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>answer(b,t);$("#opts").append(b)});
+  bar();
+}
+function answer(b,t){
+  if(S.locked)return;S.locked=true;
+  const ok=t==S.cur.t;
+  document.querySelectorAll(".opt").forEach(o=>{if(o.textContent==S.cur.t)o.classList.add("ok")});
+  if(!ok)b.classList.add("ko");else S.scores[S.turn]+=100;
+  $("#nm").textContent=S.cur.n.toUpperCase();$("#nm").style.letterSpacing="1px";
+  bar();
+  setTimeout(()=>{
+    $("#nm").textContent="? ? ?";$("#nm").style.letterSpacing="6px";
+    if(S.scores[S.turn]>=1000)return finish();
+    S.turn=(S.turn+1)%S.scores.length;next();
+  },1600);
+}
+function finish(){
+  $("#game").style.display="none";$("#end").style.display="block";
+  $("#win").textContent=S.scores.length>1?`🏆 Guanya el jugador ${S.turn+1}!`:"🏆 Has arribat a 1000 punts!";
+  $("#fin").innerHTML=S.scores.map((s,i)=>`<p>${S.scores.length>1?"Jugador "+(i+1):"Punts"}: <b>${s}</b></p>`).join("");
+}
+</script>
+</body>
+</html>
